@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FarmGuide overlayer of farm segments</title>
+    <link rel="stylesheet" href="D:\POCs\PROTOTYPE\lib\leaflet\leaflet.css" />
+    <script src="D:\POCs\PROTOTYPE\lib\leaflet\leaflet.js"></script>
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet/georaster-layer-for-leaflet.browserify.min.js"></script>
+    <script src="D:\POCs\PROTOTYPE\lib\jQuery\jQuery_v3.4.1.js"></script>
+    <script src="D:\POCs\PROTOTYPE\lib\jQuery\jQuery_v3.4.1.js"></script>
+    <link href="mapPage.css" rel="stylesheet">
+  </head>
+  <body style="background-color:powderblue;">
+    <h1>FarmGuide overlayer of farm segments</h1>
+    <div class="mapSelectionDiv">
+      <hr/>
+      <button id="baseMapBtn" class="baseMapBtn" onclick="baseMap();">Click to load Map</button>
+      <div id="mapLayer" class="map-filter">
+        <hr/>
+        <input type="checkbox" name="chk_10farmSegements" id="chk_10farmSegements" onclick="farmSegementLayer();"><a class="layers">Add farm segements for 10 villages</a>
+        <input type="checkbox" name="chk_Farm_Info" id="chk_Farm_Info" onclick="addFarmInfo();"><a class="layers">Add farm information</a>
+        <input type="checkbox" name="chk_Farm_Legend" id="chk_Farm_Legend" onclick="addFarmLegend();"><a class="layers">Add legend for farm distribution</a>
+        <hr/>
+      </div>
+      <div id="divMap" class="divMap"></div>
+    </div>
+    <script>
+      var map = createMap();
+      var baseTile, farmSegementsTile, fetchedGeoJson;
+      var info = L.control();
+      var legend = L.control({position: 'bottomright'});
+      
+      // create map object
+      function createMap() {
+      // initialize the map
+        var map = L.map('divMap').setView([25.60, 85.14], 6);
+        return map;
+      }  
+
+
+      //create base map layer
+      function baseMap() {
+      document.getElementById("mapLayer").classList.toggle("show");
+      document.getElementById("divMap").classList.toggle("show");
+      
+        // loading the base tile layer
+        // Create a varible of primary/ base tile
+        var mapboxAccessToken = 'pk.eyJ1Ijoic29iaWwiLCJhIjoiY2swNTY5dTZ2M2ltNzNobXZnM2hpMmdpdiJ9.rV5SqtAQc1Vry_HBj4itSg';
+    
+        var baseTile = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
+               attribution: '© <a href="https://www.mapbox.com/feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        });
+        //Adding the base tile to the map-
+        map.addLayer(baseTile);
+      }
+      
+
+      function farmSegementLayer() {
+        var chk_10farmSegements= document.getElementById("chk_10farmSegements");       
+        if(chk_10farmSegements.checked == true){
+
+          $.getJSON("http://localhost:8080/Bulandshahr_10Villages_Segments.geojson",function(data){
+            // add GeoJSON layer to the map once the file is loaded
+            fetchedGeoJson = data;
+            farmSegementsTile = L.geoJSON(fetchedGeoJson,{
+                                          style: styleFarmSegment,
+                                          onEachFeature: onEachFarmFeature
+                                        });
+            map.addLayer(farmSegementsTile);
+            map.fitBounds(farmSegementsTile.getBounds());
+          });
+
+        } else {
+          map.removeLayer(farmSegementsTile);
+        }
+      }
+
+      function styleFarmSegment(feature) {
+        return {
+          fillColor: getFarmColor(feature.properties.AREA),
+          weight: 1,
+          opacity: 0.7,
+          color: 'white',
+          dashArray: '3',
+          fillOpacity: 0.7
+        };
+      }
+
+      function getFarmColor(AREA) {
+        return AREA > 10000 ? '#d7191c' :
+               AREA > 5000  ? '#fdae61' :
+               AREA > 3000  ? '#66c2a4' :
+               AREA > 1000  ? '#a6d96a' :
+               AREA > 0     ? '#1a9641' :
+                              '#252525';
+      }
+
+
+      function onEachFarmFeature(feature, layer) {
+        layer.on({
+          mouseover: highlightFarmFeature,
+          mouseout: resetFarmHighlight,
+          click: zoomToFarmFeature
+        });
+      }
+
+
+      function highlightFarmFeature(e) {
+        var layer = e.target;
+
+        layer.setStyle({
+          weight: 5,
+          color: '#666',
+          dashArray: '',
+          fillOpacity: 0.7
+        });
+
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+          layer.bringToFront();
+        }
+        if(chk_Farm_Info.checked == true){
+          info.update(layer.feature.properties);
+        }
+      }
+
+
+      function resetFarmHighlight(e) {
+        farmSegementsTile.resetStyle(e.target);
+        if(chk_Farm_Info.checked == true){
+          info.update();
+        }
+      }
+
+
+      function zoomToFarmFeature(e) {
+        map.fitBounds(e.target.getBounds());
+      }
+
+
+      function addFarmInfo() {
+        var chk_Farm_Info= document.getElementById("chk_Farm_Info");       
+        if(chk_Farm_Info.checked == true){
+          info.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+            this.update();
+            return this._div;
+          };
+
+          // method that we will use to update the control based on feature properties passed
+          info.update = function (props) {
+            this._div.innerHTML = '<h4>Farm info.</h4>' +  (props ?
+              '<b>FarmId : ' + props.OBJECTID + '</b><br />Area = ' + props.AREA : 'Hover over a farm');
+          };
+
+          info.addTo(map);
+        } else {
+          info.remove(map);
+        }
+      }
+
+
+      function addFarmLegend() {
+        var chk_Farm_Legend= document.getElementById("chk_Farm_Legend");       
+        if(chk_Farm_Legend.checked == true){
+          legend.onAdd = function (map) {
+
+            var div = L.DomUtil.create('div', 'info legend'),
+              grades = [0, 1000, 3000, 5000, 10000];
+
+            // adding legend for Not defined area - 
+             div.innerHTML +=
+                '<b>Area</b><br><i style="background:' + getFarmColor(0) + '"></i> ' + 'Not available<br>';
+
+            // loop through our density intervals and generate a label with a colored square for each interval
+            for (var i = 0; i < grades.length; i++) {
+              div.innerHTML +=
+                '<i style="background:' + getFarmColor(grades[i] + 1) + '"></i> ' +
+                grades[i] + (grades[i + 1] ? ' &ndash; ' + grades[i + 1] + '<br>' : '+');
+            }
+
+            return div;
+          };
+
+          legend.addTo(map);
+        } else {
+          legend.remove(map);
+        }
+      }
+      
+      
+    </script>
+  </body>
+</html>

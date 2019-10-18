@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Vega Overlayer of Soil moisture</title>
+    <link rel="stylesheet" href="D:\POCs\PROTOTYPE\lib\leaflet\leaflet.css" />
+    <script src="D:\POCs\PROTOTYPE\lib\leaflet\leaflet.js"></script>
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet/georaster-layer-for-leaflet.browserify.min.js"></script>
+    <link href="mapPage.css" rel="stylesheet">
+  </head>
+  <body style="background-color:powderblue;">
+    <h1>Vega Overlayer of Soil moisture</h1>
+    <div class="mapSelectionDiv">
+      <hr/>
+      <button id="baseMapBtn" class="baseMapBtn" onclick="baseMap();">Click to load Map</button>
+      <div id="mapLayer" class="map-filter">
+        <hr/>
+        <input type="checkbox" name="chk_belagaviDistrict" id="chk_belagaviDistrict" onclick="belagaviDistrictLayer();"><a class="layers">Belagavi District moisture layer</a>
+        <input type="checkbox" name="chk_ramdurgTaluk" id="chk_ramdurgTaluk" onclick="ramdurgTalukLayer();"><a class="layers">Ramdurg Taluk moisture layer</a>
+        <hr/>
+      </div>
+      <div id="divMap" class="divMap"></div>
+    </div>
+    <script>
+      var map = createMap();
+      var baseTile, belagaviDistrictTile, ramdurgTalukTile;
+      
+      // create map object
+      function createMap() {
+      // initialize the map
+        var map = L.map('divMap').setView([25.60, 85.14], 6);
+        return map;
+      }  
+
+
+      //create base map layer
+      function baseMap() {
+      document.getElementById("mapLayer").classList.toggle("show");
+      document.getElementById("divMap").classList.toggle("show");
+      
+        // loading the base tile layer
+        // Create a varible of primary/ base tile
+        baseTile =  L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            attribution: '&copy; Openstreetmap France | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            minZoom: 1
+          });
+        //Adding the base tile to the map-
+        map.addLayer(baseTile);
+      }
+      
+
+      function belagaviDistrictLayer() {
+        var chk_belagaviDistrict= document.getElementById("chk_belagaviDistrict");       
+        if(chk_belagaviDistrict.checked == true){
+
+          var url_to_geotiff_file = "http://localhost:8080/ras_dis.tif";
+          //var url_to_geotiff_file = "https://geotiff.github.io/georaster-layer-for-leaflet-example/example_4326.tif";
+          // var fetchTiffFile = fetch(url_to_geotiff_file, { mode: 'no-cors' });
+
+          fetch(url_to_geotiff_file)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+              parseGeoraster(arrayBuffer).then(georaster => {
+                console.log("georaster:", georaster);
+
+                
+                belagaviDistrictTile = new GeoRasterLayer({
+                    georaster: georaster,
+                    opacity: 0.7,
+                    //pixelValuesToColorFn: values => values[0] === 42 ? '#ffffff' : '#000000',
+                    resolution: 64 // optional parameter for adjusting display resolution
+                });
+            belagaviDistrictTile.addTo(map);
+            map.fitBounds(belagaviDistrictTile.getBounds());
+
+          });
+        });
+
+        } else {
+          map.removeLayer(belagaviDistrictTile);
+        }
+      }
+
+
+      function ramdurgTalukLayer() {
+        var chk_ramdurgTaluk= document.getElementById("chk_ramdurgTaluk");       
+        if(chk_ramdurgTaluk.checked == true){
+
+          var url_to_geotiff_file = "http://localhost:8080/ras_tal.tif";
+          //var url_to_geotiff_file = "https://geotiff.github.io/georaster-layer-for-leaflet-example/example_4326.tif";
+          // var fetchTiffFile = fetch(url_to_geotiff_file, { mode: 'no-cors' });
+
+          fetch(url_to_geotiff_file)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+              parseGeoraster(arrayBuffer).then(georaster => {
+                console.log("georaster:", georaster);
+
+                
+                ramdurgTalukTile = new GeoRasterLayer({
+                    georaster: georaster,
+                    opacity: 0.7,
+                    //pixelValuesToColorFn: values => values[0] === 42 ? '#ffffff' : '#000000',
+                    resolution: 64 // optional parameter for adjusting display resolution
+                });
+            ramdurgTalukTile.addTo(map);
+            map.fitBounds(ramdurgTalukTile.getBounds());
+
+          });
+        });
+
+        } else {
+          map.removeLayer(ramdurgTalukTile);
+        }
+      }
+      
+      
+    </script>
+  </body>
+</html>

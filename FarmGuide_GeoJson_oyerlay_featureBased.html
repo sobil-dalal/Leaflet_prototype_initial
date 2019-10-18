@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FarmGuide overlayer of farm segments with Menus</title>
+    <link rel="stylesheet" href=".\lib\leaflet\leaflet.css" />
+    <script src=".\lib\leaflet\leaflet.js"></script>
+    <script src=".\lib\jQuery\jQuery_v3.4.1.js"></script>
+    <script src=".\lib\leaflet_groupedlayercontrol\leaflet.groupedlayercontrol.js"></script>
+    <script src=".\lib\sidebarV2_plugin\leaflet-sidebar-v2.min.js"></script>
+    <script src=".\supporting_JS\farmGuide_style.js"></script>
+    <script src=".\supporting_JS\farmGuide_container_switch.js"></script>
+    <script src=".\supporting_JS\farmGuide_infoControl.js"></script>
+    <script src=".\supporting_JS\farmGuide_legendControl.js"></script>
+    <link href="mapPage.css" rel="stylesheet">
+    <link href="menuBar.css" rel="stylesheet">
+    <link href=".\lib\sidebarV2_plugin\leaflet-sidebar.css" rel="stylesheet">
+    <link href=".\lib\fontawesome-free-5.10.2-web\css\allInOne.min.css" rel="stylesheet">
+  </head>
+  <body style="background-color:#f0f0f7;">
+    <div style="background-color:#2F2E43;"><img src="images\logos\DeehatIcon.png" alt="Deehat" style="width:200px;height:50px;"></div>    
+    <div class="topnav">
+      <a><button id= "areaButton" onclick="onArea()"><i class="fa fa-area-chart"></i> Area</button></a>
+      <a><button id= "frequencyButton" onclick="onFrequency()"><i class="fas fa-wave-square"></i> Frequency</button></a>
+    </div>
+    <div class="mapSelectionDiv">
+      <div id="sidebar" class="leaflet-sidebar collapsed">
+      </div>
+      <div id="divMap" class="divMap"></div>
+    </div>
+    <p style="text-align:center; color:#2F2E43;">© Copyright 2012-2019 Green Agrevolution Pvt. Ltd. All Rights Reserved</p>
+    <script>
+      document.getElementById("divMap").classList.toggle("show");
+
+      /* ----------------------------Base maps starts---------------------------- */
+      var baseOpenStreetMap_FranceMap = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+        maxZoom: 20,
+        attribution: '© Openstreetmap France | © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      });
+      var baseEsri_WorldImageryMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 17
+      });
+      var baseMaps = {
+        "OSM_France": baseOpenStreetMap_FranceMap,
+        "Esri": baseEsri_WorldImageryMap
+      };
+
+      // Creating map object
+      var map = L.map('divMap', {
+        center: [28.4070, 77.8498],
+        zoom: 10,
+        layers: [baseEsri_WorldImageryMap]
+      });
+
+      // Creating the control for layers
+      var baseControlLayers = L.control.groupedLayers(baseMaps, "", {
+        collapsed: false
+      });
+
+      // Adding the layers to the map object
+      baseControlLayers.addTo(map);
+
+      // reading the geoJson file via jquery AJax call
+      var farmSegementsGeoJson;
+      $.ajax({
+        url: "http://localhost:8080/Bulandshahr_10Villages_Segments_updated.geojson",
+        dataType: 'json',
+        async: false,
+        success: function (jsonData) {
+          farmSegementsGeoJson = jsonData;
+        }
+      });
+      /* ----------------------------Base maps ends---------------------------- */
+
+      /* ----------------------------All layers instance creation starts---------------------------- */
+      /* ----------------------------Farmsegments layers instance creation starts---------------------------- */
+      var farmSegementsLayer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleFarmSegment,
+        onEachFeature: onEachFarmSegment
+      });
+      /* ----------------------------Farmsegments layers instance creation ends---------------------------- */
+
+      /* ----------------------------Area layers instance creation starts---------------------------- */
+      var areaLayer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleArea,
+        onEachFeature: onAreaEach
+      });
+      var area_F1_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleArea,
+        onEachFeature: onAreaEach,
+        filter: function(feature, layer) {
+          return feature.properties.FA_acre < 0.5;
+        }
+      });
+      var area_F2_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleArea,
+        onEachFeature: onAreaEach,
+        filter: function(feature, layer) {
+          return (feature.properties.FA_acre > 0.5 && feature.properties.FA_acre < 1.0);
+        }
+      });
+      var area_F3_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleArea,
+        onEachFeature: onAreaEach,
+        filter: function(feature, layer) {
+          return (feature.properties.FA_acre > 1.0 && feature.properties.FA_acre < 2.0);
+        }
+      });
+      var area_F4_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleArea,
+        onEachFeature: onAreaEach,
+        filter: function(feature, layer) {
+          return (feature.properties.FA_acre > 2.0 && feature.properties.FA_acre < 3.0);
+        }
+      });
+      var area_F5_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleArea,
+        onEachFeature: onAreaEach,
+        filter: function(feature, layer) {
+          return feature.properties.FA_acre > 3.0;
+        }
+      });
+      /* ----------------------------Area layers instance creation ends---------------------------- */
+
+      /* ----------------------------Frequency layers instance creation starts---------------------------- */
+      var frequencyLayer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleFrequency,
+        onEachFeature: onFrequencyEach
+      });
+      var frequency_F1_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleFrequency,
+        onEachFeature: onFrequencyEach,
+        filter: function(feature, layer) {
+          return feature.properties.Cropping_F == 0;
+        }
+      });
+      var frequency_F2_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleFrequency,
+        onEachFeature: onFrequencyEach,
+        filter: function(feature, layer) {
+          return feature.properties.Cropping_F == 1;
+        }
+      });
+      var frequency_F3_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleFrequency,
+        onEachFeature: onFrequencyEach,
+        filter: function(feature, layer) {
+          return feature.properties.Cropping_F == 2;
+        }
+      });
+      var frequency_F4_layer = L.geoJSON(farmSegementsGeoJson, {
+        style: styleFrequency,
+        onEachFeature: onFrequencyEach,
+        filter: function(feature, layer) {
+          return feature.properties.Cropping_F == 3;
+        }
+      });
+      /* ----------------------------Frequency layers instance creation ends---------------------------- */
+      /* ============================All layers instance creation ends============================ */
+
+      /* ----------------------------All oyerlayer layer control instance creation starts---------------------------- */
+      var areaOverlay = {
+        "<span class='overLayer'>Area layers -<span>": {
+          "All": areaLayer,
+          "0.0 - 0.5 acre": area_F1_layer,
+          "0.5 - 1.0 acre": area_F2_layer,
+          "1.0 - 2.0 acre": area_F3_layer,
+          "2.0 - 3.0 acre": area_F4_layer,
+          "3.0 + acre": area_F5_layer
+        }
+      };
+      var areaControl = L.control.groupedLayers("", areaOverlay, {
+        collapsed: false
+      });
+
+      var frequencyOverlay = {
+        "<span class='overLayer'>Area layers -<span>": {
+          "All": frequencyLayer,
+          "0 Frequency": frequency_F1_layer,
+          "1 Frequency": frequency_F2_layer,
+          "2 Frequency": frequency_F3_layer,
+          "3 Frequency": frequency_F4_layer
+        }
+      };
+      var frequencyControl = L.control.groupedLayers("", frequencyOverlay, {
+        collapsed: false
+      });
+      /* ----------------------------All oyerlayer layer control instance creation ends---------------------------- */
+
+      /* ----------------------------Primary - On load page starts---------------------------- */
+      farmSegementsLayer.addTo(map);
+      map.fitBounds(farmSegementsLayer.getBounds());
+      /* ----------------------------Primary - On load page ends---------------------------- */
+
+      /* ----------------------------Area - On load page starts---------------------------- */
+      function onArea() {
+        removeAllLayers();
+        removeAllActive();
+        document.getElementById('areaButton').classList.add('active');
+        areaLayer.addTo(map);
+        map.fitBounds(areaLayer.getBounds());
+        areaControl.addTo(map);
+        areaInfo();
+        areaLegend();
+        areaContainerSwitch();
+      }
+      /* ----------------------------Area - On load page ends---------------------------- */
+
+      /* ----------------------------Frequency - On load page starts---------------------------- */
+      function onFrequency() {
+        removeAllLayers();
+        removeAllActive();
+        document.getElementById('frequencyButton').classList.add('active');
+        frequencyLayer.addTo(map);
+        map.fitBounds(frequencyLayer.getBounds());
+        frequencyControl.addTo(map);
+        frequencyInfo();
+        /*frequencyLegend();
+        frequencyContainerSwitch();*/
+      }
+      /* ----------------------------Frequency - On load page ends---------------------------- */
+
+      /* ----------------------------Sidebar code starts---------------------------- */
+      // create the sidebar instance and add it to the map
+      var sidebar = L.control.sidebar({
+          autopan: true, // whether to maintain the centered map point when opening the sidebar
+          closeButton: true, // whether t add a close button to the panes
+          container: 'sidebar', // the DOM container or #ID of a predefined sidebar container that should be used
+          position: 'right'
+        })
+        .addTo(map);
+
+      // add panels dynamically to the sidebar
+      sidebar.addPanel({
+        id: 'baseLayer',
+        tab: '<i class="fa fa-bars active"></i>',
+        title: 'Base Layer',
+        pane: '<div id="baseControl"></div>'
+      });
+      sidebar.addPanel({
+        id: 'overLayer',
+        tab: '<i class="fas fa-layer-group"</i>',
+        title: 'Over Layers',
+        pane: '<div style= "margin-top: 12px;" id="overLayerControl"></div><br>' +
+              '<div id="infoControl"></div><br>' +
+              '<div id="legendControl"></div>'
+      });
+      /* ----------------------------Sidebar code ends---------------------------- */
+
+      /* ----------------------------Switch the container of Base layer to sidebar starts---------------------------- */
+      //  baseLayers htmlContainer switch
+      var baseLayersInsideMap = baseControlLayers.getContainer();
+      var baseLayersOutsideMap = document.getElementById('baseControl');
+      setParent(baseLayersInsideMap, baseLayersOutsideMap);
+      /* ----------------------------Switch the container of Base layer to sidebar ends---------------------------- */
+
+      /* ----------------------------Add info control starts---------------------------- */
+      // creating the info control variable
+      var infoControl = L.control();
+      infoControl.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+        this.update();
+        return this._div;
+      };
+      /* ----------------------------Add info control ends---------------------------- */
+
+      /* ----------------------------Add legend control starts---------------------------- */
+      // creating the legend control variable
+      var legendControl = L.control({position: 'bottomright'});
+      legendControl.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info legend'); // create a div with a class "info legend"
+        this.update();
+        return this._div;
+      };
+      /* ----------------------------Add legend control ends---------------------------- */
+
+      /* ----------------------------Other helping methods starts---------------------------- */
+      // Remove all the leaflet layers
+      function removeAllLayers() {
+        map.removeLayer(farmSegementsLayer);
+        map.removeLayer(areaLayer);
+        map.removeLayer(area_F1_layer);
+        map.removeLayer(area_F2_layer);
+        map.removeLayer(area_F3_layer);
+        map.removeLayer(area_F4_layer);
+        map.removeLayer(area_F5_layer);
+        map.removeLayer(frequencyLayer);
+        map.removeLayer(frequency_F1_layer);
+        map.removeLayer(frequency_F2_layer);
+        map.removeLayer(frequency_F3_layer);
+        map.removeLayer(frequency_F4_layer);
+        map.removeControl(areaControl);
+        map.removeControl(infoControl);
+        map.removeControl(legendControl);
+      }
+      // Remove the active preperty from button
+      function removeAllActive() {
+        document.getElementById('areaButton').classList.remove('active');
+        document.getElementById('frequencyButton').classList.remove('active');
+      }
+      /* ----------------------------Other helping methods ends---------------------------- */
+
+      /*
+
+            
+      var legend = L.control({position: 'bottomright'});
+
+      function addFarmInfo() {
+        info.onAdd = function (map) {
+          this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+          this.update();
+          return this._div;
+        };
+        // method that we will use to update the control based on feature properties passed
+        info.update = function (props) {
+          this._div.innerHTML = '<h4>Farm information - </h4>' +  
+          (props ?
+          '<b>FarmId : ' + props.Farm_ID + '</b>' +
+          '<br/>Area = ' + props.FA_acre + ' acre' +
+          '<br/>Village Name = ' + props.Village_Na +
+          '<br/>Block Name = ' + props.Block_Name +
+          '<br/>District = ' + props.District +
+          '<br/>Kharif crops 2018 = ' + props.Crop_Khari +
+          '<br/>Rabi crops sown 2018-19 = ' + props.Crop_Rabi_ +
+          '<br/>Crops frequency = ' + props.Cropping_F +
+          '<br/>Land usage land classification = ' + props.LULC_2019 +
+          '<br/>Irrigation status = ' + props.Irrigation: 
+          'Hover over a farm');
+        };
+        info.addTo(map);
+      }
+
+      function addFarmLegend() {
+        legend.onAdd = function (map) {
+          var div = L.DomUtil.create('div', 'info legend'),
+          grades = [0, 0.5, 1, 2, 3];
+          // adding legend for Not defined area - 
+          div.innerHTML +=
+          '<b>Area (acre)</b><br>';
+
+          // loop through our density intervals and generate a label with a colored square for each interval
+          for (var i = 0; i < grades.length; i++) {
+            div.innerHTML +=
+            '<i style="background:' + getFarmColor(grades[i] + 1) + '"></i> ' +
+            grades[i] + (grades[i + 1] ? ' – ' + grades[i + 1] + '<br>' : '+');
+          }
+          return div;
+        };
+        legend.addTo(map);
+      }      */
+    </script>
+  </body>
+</html>

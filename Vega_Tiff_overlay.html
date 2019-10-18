@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Vega Overlayer of Soil moisture</title>
+    <link rel="stylesheet" href="D:\POCs\PROTOTYPE\lib\leaflet\leaflet.css" />
+    <script src="D:\POCs\PROTOTYPE\lib\leaflet\leaflet.js"></script>
+    <script src="D:\POCs\PROTOTYPE\lib\geotiff\src\main.js"></script>
+    <script src="D:\POCs\PROTOTYPE\lib\plotty\src\plotty.js"></script>
+    <script src="D:\POCs\PROTOTYPE\lib\leaflet_geotiff_plugin\leaflet-geotiff.js"></script>
+    <!-- Load any renderer you need -->
+    <script src="D:\POCs\PROTOTYPE\lib\leaflet_geotiff_plugin\leaflet-geotiff-plotty.js"></script>
+    <script src="D:\POCs\PROTOTYPE\lib\leaflet_geotiff_plugin\leaflet-geotiff-vector-arrows.js"></script>
+    <link href="mapPage.css" rel="stylesheet">
+  </head>
+  <body style="background-color:powderblue;">
+    <h1>Vega Overlayer of Soil moisture</h1>
+    <div class="mapSelectionDiv">
+      <hr/>
+      <button id="baseMapBtn" class="baseMapBtn" onclick="baseMap();">Click to load Map</button>
+      <div id="mapLayer" class="map-filter">
+        <hr/>
+        <input type="checkbox" name="chk_belagaviDistrict" id="chk_belagaviDistrict" onclick="belagaviDistrictLayer();"><a class="layers">Belagavi District moisture layer</a>
+        <hr/>
+      </div>
+      <div id="divMap" class="divMap"></div>
+    </div>
+    <script>
+      var map = createMap();
+      var baseTile, belagaviDistrictTile;
+      
+      // create map object
+      function createMap() {
+      // initialize the map
+        var map = L.map('divMap').setView([25.60, 85.14], 6);
+        return map;
+      }  
+
+
+      //create base map layer
+      function baseMap() {
+      document.getElementById("mapLayer").classList.toggle("show");
+      document.getElementById("divMap").classList.toggle("show");
+      
+        // loading the base tile layer
+        // Create a varible of primary/ base tile
+        baseTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC',
+            maxZoom: 12,
+            minZoom: 1
+          });
+        //Adding the base tile to the map-
+        map.addLayer(baseTile);
+      }
+      
+
+      function belagaviDistrictLayer() {
+        var chk_belagaviDistrict= document.getElementById("chk_belagaviDistrict");       
+        if(chk_belagaviDistrict.checked == true){
+          belagaviDistrictTile = L.leafletGeotiff("D:\POCs\PROTOTYPE\TIFF_files\ras_dis.tif");
+          map.addLayer(belagaviDistrictTile);
+        } else {
+          map.removeLayer(belagaviDistrictTile);
+        }
+      }
+
+      
+      
+    </script>
+  </body>
+</html>
